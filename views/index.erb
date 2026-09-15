@@ -1,0 +1,15 @@
+<h1>メモアプリ</h1>
+
+<p>保存されているメモを一覧で表示します。</p>
+
+<p>
+  <a class="button-link" href="/memos/new">メモを追加</a>
+</p>
+
+<div class="table-scroll">
+  <ul class="memo-list">
+    <% @memos.each do |memo| %>
+      <li><a href="/memos/<%= h(memo["id"]) %>"><%= h(memo["title"]) %></a></li>
+    <% end %>
+  </ul>
+</div>
