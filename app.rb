@@ -4,6 +4,7 @@ require 'json'
 require 'rack/utils'
 require 'securerandom'
 require 'sinatra'
+require 'fileutils'
 
 enable :method_override
 
@@ -27,7 +28,7 @@ def save_memos(memos)
 end
 
 def find_memo(id)
-  load_memos.find { |memo| memo['id'] == id }
+  find_memo_from(load_memos, id)
 end
 
 def find_memo_from(memos, id)
@@ -58,7 +59,10 @@ end
 
 get '/memos/:id/edit' do
   @memo = find_memo(params['id'])
-  halt 404, 'メモが見つかりません' if @memo.nil?
+  if @memo.nil?
+    status 404
+    return erb :not_found
+  end
 
   @errors = []
   erb :edit
@@ -99,7 +103,7 @@ end
 patch '/memos/:id' do
   memos = load_memos
   memo = find_memo_from(memos, params['id'])
-  if memo.nil?
+  if @memo.nil?
     status 404
     return erb :not_found
   end
@@ -122,7 +126,7 @@ end
 delete '/memos/:id' do
   memos = load_memos
   memo = find_memo_from(memos, params['id'])
-  if memo.nil?
+  if @memo.nil?
     status 404
     return erb :not_found
   end

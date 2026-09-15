@@ -9,7 +9,7 @@
 <div class="table-scroll">
   <ul class="memo-list">
     <% @memos.each do |memo| %>
-      <li><a href="/memos/<%= h(memo["id"]) %>"><%= h(memo["title"]) %></a></li>
+      <li><a href="/memos/<%= (memo["id"]) %>"><%= h(memo["title"]) %></a></li>
     <% end %>
   </ul>
 </div>

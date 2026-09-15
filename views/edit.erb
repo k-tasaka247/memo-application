@@ -7,13 +7,13 @@
     <p>入力内容を確認してください。</p>
     <ul>
       <% @errors.each do |error| %>
-        <li><%= h(error) %></li>
+        <li><%= (error) %></li>
       <% end %>
     </ul>
   </div>
 <% end %>
 
-<form class="memo-form" action="/memos/<%= h(@memo["id"]) %>" method="post">
+<form class="memo-form" action="/memos/<%= (@memo["id"]) %>" method="post">
   <input type="hidden" name="_method" value="patch">
 
   <div class="form-field">
@@ -28,6 +28,6 @@
 
   <div class="form-actions">
     <button type="submit">更新する</button>
-    <a href="/memos/<%= h(@memo["id"]) %>">詳細へ戻る</a>
+    <a href="/memos/<%= (@memo["id"]) %>">詳細へ戻る</a>
   </div>
 </form>
