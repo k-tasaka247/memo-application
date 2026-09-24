@@ -6,10 +6,10 @@
   <a class="button-link" href="/memos/new">メモを追加</a>
 </p>
 
-<div class="table-scroll">
+<div class="list-scroll">
   <ul class="memo-list">
-    <% @memos.each do |memo| %>
-      <li><a href="/memos/<%= memo["id"] %>"><%= h(memo["title"]) %></a></li>
+    <% @memos.each do |id, memo| %>
+      <li><a href="/memos/<%= id %>"><%= h(memo["title"]) %></a></li>
     <% end %>
   </ul>
 </div>

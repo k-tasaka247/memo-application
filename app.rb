@@ -19,20 +19,16 @@ end
 def load_memos
   JSON.parse(File.read(MEMOS_FILE))
 rescue Errno::ENOENT, JSON::ParserError
-  []
+  {}
 end
 
 def save_memos(memos)
   FileUtils.mkdir_p(File.dirname(MEMOS_FILE))
-  File.write(MEMOS_FILE, "#{JSON.pretty_generate(memos)}\n")
+  File.write(MEMOS_FILE, JSON.generate(memos))
 end
 
 def find_memo(id)
-  find_memo_from(load_memos, id)
-end
-
-def find_memo_from(memos, id)
-  memos.find { |memo| memo['id'] == id }
+  load_memos[id]
 end
 
 def memo_params
@@ -58,7 +54,8 @@ get '/memos/new' do
 end
 
 get '/memos/:id/edit' do
-  @memo = find_memo(params['id'])
+  @id = params['id']
+  @memo = find_memo(@id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -69,7 +66,8 @@ get '/memos/:id/edit' do
 end
 
 get '/memos/:id' do
-  @memo = find_memo(params['id'])
+  @id = params['id']
+  @memo = find_memo(@id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -93,17 +91,18 @@ post '/memos' do
   end
 
   memos = load_memos
-  memo = { 'id' => SecureRandom.uuid }.merge(@memo)
-  memos << memo
+  id = SecureRandom.uuid
+  memos[id] = @memo
   save_memos(memos)
 
-  redirect "/memos/#{memo['id']}"
+  redirect "/memos/#{id}"
 end
 
 patch '/memos/:id' do
+  @id = params['id']
   memos = load_memos
-  memo = find_memo_from(memos, params['id'])
-  if @memo.nil?
+  memo = memos[@id]
+  if memo.nil?
     status 404
     return erb :not_found
   end
@@ -117,21 +116,20 @@ patch '/memos/:id' do
     return erb :edit
   end
 
-  memo.merge!(@memo)
+  memo.merge!(memo_params)
   save_memos(memos)
 
-  redirect "/memos/#{memo['id']}"
+  redirect "/memos/#{@id}"
 end
 
 delete '/memos/:id' do
   memos = load_memos
-  memo = find_memo_from(memos, params['id'])
-  if @memo.nil?
+  unless memos.key?(params['id'])
     status 404
     return erb :not_found
   end
 
-  memos.delete(memo)
+  memos.delete(params['id'])
   save_memos(memos)
 
   redirect '/memos'
