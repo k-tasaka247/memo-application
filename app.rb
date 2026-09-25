@@ -18,7 +18,7 @@ end
 
 def load_memos
   JSON.parse(File.read(MEMOS_FILE))
-rescue Errno::ENOENT, JSON::ParserError
+rescue Errno::ENOENT
   {}
 end
 
@@ -116,7 +116,7 @@ patch '/memos/:id' do
     return erb :edit
   end
 
-  memo.merge!(memo_params)
+  memos[@id] = @memo
   save_memos(memos)
 
   redirect "/memos/#{@id}"
@@ -124,10 +124,6 @@ end
 
 delete '/memos/:id' do
   memos = load_memos
-  unless memos.key?(params['id'])
-    status 404
-    return erb :not_found
-  end
 
   memos.delete(params['id'])
   save_memos(memos)
