@@ -1,0 +1,33 @@
+<h1>メモ編集</h1>
+
+<p>メモの内容を変更します。</p>
+
+<% unless @errors.empty? %>
+  <div class="error-messages" role="alert">
+    <p>入力内容を確認してください。</p>
+    <ul>
+      <% @errors.each do |error| %>
+        <li><%= error %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<form class="memo-form" action="/memos/<%= @id %>" method="post">
+  <input type="hidden" name="_method" value="patch">
+
+  <div class="form-field">
+    <label for="title">タイトル</label>
+    <input type="text" id="title" name="title" value="<%= h(@memo["title"]) %>">
+  </div>
+
+  <div class="form-field">
+    <label for="description">内容</label>
+    <textarea id="description" name="description" rows="5"><%= h(@memo["description"]) %></textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit">更新する</button>
+    <a href="/memos/<%= @id %>">詳細へ戻る</a>
+  </div>
+</form>
