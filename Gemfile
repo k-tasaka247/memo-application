@@ -5,6 +5,7 @@ ruby "3.4.10"
 gem "puma", "~> 8.0.0"
 gem "rackup", "~> 2.3.0"
 gem "sinatra", "~> 4.2.0"
+gem "pg"
 
 group :development do
   gem 'rubocop-fjord', require: false
