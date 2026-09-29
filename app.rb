@@ -7,7 +7,6 @@ require 'sinatra'
 enable :method_override
 
 DB_NAME = 'memo_app'
-ID_PATTERN = /\A\d+\z/
 
 configure do
   conn = PG.connect(dbname: DB_NAME)
@@ -36,17 +35,11 @@ after do
   @db&.close
 end
 
-def valid_id?(id)
-  id.match?(ID_PATTERN)
-end
-
 def load_memos
   db.exec('SELECT id, title FROM memos ORDER BY id').to_a
 end
 
 def find_memo(id)
-  return nil unless valid_id?(id)
-
   db.exec_params('SELECT title, description FROM memos WHERE id = $1', [id]).first
 end
 
@@ -54,7 +47,7 @@ def create_memo(memo)
   db.exec_params(
     'INSERT INTO memos (title, description) VALUES ($1, $2) RETURNING id',
     [memo['title'], memo['description']]
-  ).first
+  ).first['id']
 end
 
 def update_memo(id, memo)
@@ -65,8 +58,6 @@ def update_memo(id, memo)
 end
 
 def delete_memo(id)
-  return unless valid_id?(id)
-
   db.exec_params('DELETE FROM memos WHERE id = $1', [id])
 end
 
@@ -93,7 +84,7 @@ get '/memos/new' do
 end
 
 get '/memos/:id/edit' do
-  @id = params['id']
+  @id = params['id'].to_i
   @memo = find_memo(@id)
   if @memo.nil?
     status 404
@@ -105,7 +96,7 @@ get '/memos/:id/edit' do
 end
 
 get '/memos/:id' do
-  @id = params['id']
+  @id = params['id'].to_i
   @memo = find_memo(@id)
   if @memo.nil?
     status 404
@@ -129,13 +120,13 @@ post '/memos' do
     return erb :new
   end
 
-  id = create_memo(@memo)['id']
+  id = create_memo(@memo)
 
   redirect "/memos/#{id}"
 end
 
 patch '/memos/:id' do
-  @id = params['id']
+  @id = params['id'].to_i
   memo = find_memo(@id)
   if memo.nil?
     status 404
@@ -157,7 +148,7 @@ patch '/memos/:id' do
 end
 
 delete '/memos/:id' do
-  delete_memo(params['id'])
+  delete_memo(params['id'].to_i)
 
   redirect '/memos'
 end
