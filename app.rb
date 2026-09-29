@@ -2,22 +2,20 @@
 
 require 'pg'
 require 'rack/utils'
-require 'securerandom'
 require 'sinatra'
 
 enable :method_override
 
 DB_NAME = 'memo_app'
-UUID_PATTERN = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
+ID_PATTERN = /\A\d+\z/
 
 configure do
   conn = PG.connect(dbname: DB_NAME)
   conn.exec(<<~SQL)
     CREATE TABLE IF NOT EXISTS memos (
-      id uuid PRIMARY KEY,
+      id serial PRIMARY KEY,
       title text NOT NULL,
-      description text NOT NULL DEFAULT '',
-      created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
+      description text NOT NULL DEFAULT ''
     );
   SQL
 ensure
@@ -38,25 +36,25 @@ after do
   @db&.close
 end
 
-def uuid?(id)
-  id.match?(UUID_PATTERN)
+def valid_id?(id)
+  id.match?(ID_PATTERN)
 end
 
 def load_memos
-  db.exec('SELECT id, title FROM memos ORDER BY created_at').to_a
+  db.exec('SELECT id, title FROM memos ORDER BY id').to_a
 end
 
 def find_memo(id)
-  return nil unless uuid?(id)
+  return nil unless valid_id?(id)
 
   db.exec_params('SELECT title, description FROM memos WHERE id = $1', [id]).first
 end
 
-def create_memo(id, memo)
+def create_memo(memo)
   db.exec_params(
-    'INSERT INTO memos (id, title, description) VALUES ($1, $2, $3)',
-    [id, memo['title'], memo['description']]
-  )
+    'INSERT INTO memos (title, description) VALUES ($1, $2) RETURNING id',
+    [memo['title'], memo['description']]
+  ).first
 end
 
 def update_memo(id, memo)
@@ -67,7 +65,7 @@ def update_memo(id, memo)
 end
 
 def delete_memo(id)
-  return unless uuid?(id)
+  return unless valid_id?(id)
 
   db.exec_params('DELETE FROM memos WHERE id = $1', [id])
 end
@@ -131,8 +129,7 @@ post '/memos' do
     return erb :new
   end
 
-  id = SecureRandom.uuid
-  create_memo(id, @memo)
+  id = create_memo(@memo)['id']
 
   redirect "/memos/#{id}"
 end
