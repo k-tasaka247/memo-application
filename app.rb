@@ -1,34 +1,64 @@
 # frozen_string_literal: true
 
-require 'json'
+require 'pg'
 require 'rack/utils'
-require 'securerandom'
 require 'sinatra'
-require 'fileutils'
 
 enable :method_override
 
-MEMOS_FILE = File.join(__dir__, 'data', 'memos.json')
+DB_NAME = 'memo_app'
+
+configure do
+  conn = PG.connect(dbname: DB_NAME)
+  conn.exec(<<~SQL)
+    CREATE TABLE IF NOT EXISTS memos (
+      id serial PRIMARY KEY,
+      title text NOT NULL,
+      description text NOT NULL DEFAULT ''
+    );
+  SQL
+ensure
+  conn&.close
+end
 
 helpers do
   def h(value)
     Rack::Utils.escape_html(value)
   end
+
+  def db
+    @db ||= PG.connect(dbname: DB_NAME)
+  end
+end
+
+after do
+  @db&.close # 不要なDB接続を防ぐ
 end
 
 def load_memos
-  JSON.parse(File.read(MEMOS_FILE))
-rescue Errno::ENOENT
-  {}
-end
-
-def save_memos(memos)
-  FileUtils.mkdir_p(File.dirname(MEMOS_FILE))
-  File.write(MEMOS_FILE, JSON.generate(memos))
+  db.exec('SELECT id, title FROM memos ORDER BY id').to_a
 end
 
 def find_memo(id)
-  load_memos[id]
+  db.exec_params('SELECT id, title, description FROM memos WHERE id = $1', [id]).first
+end
+
+def create_memo(memo)
+  db.exec_params(
+    'INSERT INTO memos (title, description) VALUES ($1, $2) RETURNING id',
+    [memo['title'], memo['description']]
+  ).first['id']
+end
+
+def update_memo(id, memo)
+  db.exec_params(
+    'UPDATE memos SET title = $1, description = $2 WHERE id = $3',
+    [memo['title'], memo['description'], id]
+  )
+end
+
+def delete_memo(id)
+  db.exec_params('DELETE FROM memos WHERE id = $1', [id])
 end
 
 def memo_params
@@ -54,8 +84,8 @@ get '/memos/new' do
 end
 
 get '/memos/:id/edit' do
-  @id = params['id']
-  @memo = find_memo(@id)
+  id = params['id'].to_i
+  @memo = find_memo(id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -66,8 +96,8 @@ get '/memos/:id/edit' do
 end
 
 get '/memos/:id' do
-  @id = params['id']
-  @memo = find_memo(@id)
+  id = params['id'].to_i
+  @memo = find_memo(id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -90,18 +120,14 @@ post '/memos' do
     return erb :new
   end
 
-  memos = load_memos
-  id = SecureRandom.uuid
-  memos[id] = @memo
-  save_memos(memos)
+  id = create_memo(@memo)
 
   redirect "/memos/#{id}"
 end
 
 patch '/memos/:id' do
-  @id = params['id']
-  memos = load_memos
-  memo = memos[@id]
+  id = params['id'].to_i
+  memo = find_memo(id)
   if memo.nil?
     status 404
     return erb :not_found
@@ -116,17 +142,13 @@ patch '/memos/:id' do
     return erb :edit
   end
 
-  memos[@id] = @memo
-  save_memos(memos)
+  update_memo(id, @memo)
 
-  redirect "/memos/#{@id}"
+  redirect "/memos/#{id}"
 end
 
 delete '/memos/:id' do
-  memos = load_memos
-
-  memos.delete(params['id'])
-  save_memos(memos)
+  delete_memo(params['id'].to_i)
 
   redirect '/memos'
 end
