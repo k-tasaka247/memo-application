@@ -32,7 +32,7 @@ helpers do
 end
 
 after do
-  @db&.close
+  @db&.close # 不要なDB接続を防ぐ
 end
 
 def load_memos
@@ -40,7 +40,7 @@ def load_memos
 end
 
 def find_memo(id)
-  db.exec_params('SELECT title, description FROM memos WHERE id = $1', [id]).first
+  db.exec_params('SELECT id, title, description FROM memos WHERE id = $1', [id]).first
 end
 
 def create_memo(memo)
@@ -84,8 +84,8 @@ get '/memos/new' do
 end
 
 get '/memos/:id/edit' do
-  @id = params['id'].to_i
-  @memo = find_memo(@id)
+  id = params['id'].to_i
+  @memo = find_memo(id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -96,8 +96,8 @@ get '/memos/:id/edit' do
 end
 
 get '/memos/:id' do
-  @id = params['id'].to_i
-  @memo = find_memo(@id)
+  id = params['id'].to_i
+  @memo = find_memo(id)
   if @memo.nil?
     status 404
     return erb :not_found
@@ -126,14 +126,14 @@ post '/memos' do
 end
 
 patch '/memos/:id' do
-  @id = params['id'].to_i
-  memo = find_memo(@id)
+  id = params['id'].to_i
+  memo = find_memo(id)
   if memo.nil?
     status 404
     return erb :not_found
   end
 
-  @memo = memo_params
+  @memo = memo.merge(memo_params)
   @errors = []
 
   if @memo['title'].strip.empty?
@@ -142,9 +142,9 @@ patch '/memos/:id' do
     return erb :edit
   end
 
-  update_memo(@id, @memo)
+  update_memo(id, @memo)
 
-  redirect "/memos/#{@id}"
+  redirect "/memos/#{id}"
 end
 
 delete '/memos/:id' do
